@@ -249,13 +249,6 @@ Copyright © 2024 Bolzaa Studio. All rights reserved.
 
 ---
 
-## 📞 Support
-
-**Email:** bolzaa277@gmail.com  
-**Instagram:** [@bolzaa277](https://instagram.com/bolzaa277)
-
----
-
 ## 🎯 Roadmap
 
 - [ ] Database integration (MongoDB)
