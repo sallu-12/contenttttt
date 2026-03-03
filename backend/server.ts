@@ -1,6 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import type { SendMailOptions } from 'nodemailer';
@@ -12,14 +14,63 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const isDev = process.env.NODE_ENV !== 'production';
 
-// Middleware - optimized order for performance
-// 1. Compression first (reduces response size)
+// ========================================
+// 🔒 SECURITY MIDDLEWARE
+// ========================================
+
+// 1. Helmet - Secure HTTP headers (prevents XSS, clickjacking, etc.)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
+
+// 2. Rate limiting for payment verification (prevent brute force)
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Max 5 payment attempts per 15 minutes per IP
+  message: { 
+    success: false, 
+    error: 'Too many payment verification attempts. Please try again later.',
+    verified: false 
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// 3. Rate limiting for email sending (prevent spam)
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Max 10 emails per hour per IP
+  message: { 
+    success: false, 
+    error: 'Too many email requests. Please try again later.' 
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ========================================
+// 📦 STANDARD MIDDLEWARE
+// ========================================
+
+// 4. Compression (reduces response size)
 app.use(compression({ level: 6, threshold: 1024 }));
 
-// 2. JSON parsing with size limits (increased for base64 screenshots)
+// 5. JSON parsing with size limits (increased for base64 screenshots)
 app.use(express.json({ limit: '10mb' }));
 
-// 3. CORS with optimized settings (development uses .env file)
+// 6. CORS with whitelist protection
 const allowedOrigins = isDev 
   ? process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || []
   : process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
@@ -60,6 +111,40 @@ const verifiedTransactions: {
   };
 } = {};
 
+// ========================================
+// 🛡️ SECURITY HELPERS
+// ========================================
+
+// Sanitize input to prevent XSS attacks
+const sanitizeInput = (input: string): string => {
+  if (!input || typeof input !== 'string') return '';
+  return input
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim()
+    .substring(0, 2000); // Max length protection
+};
+
+// Validate email format
+const isValidEmail = (email: string): boolean => {
+  if (!email || typeof email !== 'string') return false;
+  const emailRegex = /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email) && email.length <= 254;
+};
+
+// Validate transaction ID format (Paytm format)
+const isValidTransactionId = (txId: string): boolean => {
+  if (!txId || typeof txId !== 'string') return false;
+  return /^T\d{21,22}$/.test(txId.trim());
+};
+
+// ========================================
+// 📧 EMAIL TEMPLATE GENERATORS
+// ========================================
+
 // Generate secure verification token
 const generateVerificationToken = (transactionId: string) => {
   return `VRF_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -95,9 +180,10 @@ const sendEmailAsync = (mailOptions: SendMailOptions) => {
   });
 };
 
-// Health check removed - not being used
-// Transaction verification endpoint - CRITICAL SECURITY
-app.post('/api/verify-transaction', (req: Request, res: Response) => {
+// ========================================
+// 🔒 PAYMENT VERIFICATION ENDPOINT (RATE LIMITED)
+// ========================================
+app.post('/api/verify-transaction', paymentLimiter, (req: Request, res: Response) => {
   try {
     const { transactionId, amount, email, screenshotBase64,
       customerName, customerPhone, planName, planScripts,
@@ -105,11 +191,18 @@ app.post('/api/verify-transaction', (req: Request, res: Response) => {
       niche, audience, language, contentStyle, references
     } = req.body;
 
-    console.log(`🔍 VERIFY REQUEST: TxID=${transactionId}, Amount=₹${amount}, Email=${email}`);
+    // 🔒 SECURITY: Sanitize all text inputs
+    const sanitizedTxId = sanitizeInput(transactionId);
+    const sanitizedEmail = sanitizeInput(email);
+    const sanitizedDriveEmail = sanitizeInput(driveEmail);
+    const sanitizedName = sanitizeInput(customerName);
+    const sanitizedPhone = sanitizeInput(customerPhone);
+
+    console.log(`🔍 VERIFY REQUEST: TxID=${sanitizedTxId}, Amount=₹${amount}, Email=${sanitizedEmail}`);
     console.log(`📸 Screenshot received: ${screenshotBase64 ? 'YES' : 'NO'}`);
 
-    // Validation
-    if (!transactionId || !amount || !email) {
+    // Validation - Required fields
+    if (!sanitizedTxId || !amount || !sanitizedEmail) {
       console.log(`❌ REJECT: Missing fields`);
       return res.status(400).json({ 
         success: false, 
@@ -118,6 +211,17 @@ app.post('/api/verify-transaction', (req: Request, res: Response) => {
       });
     }
 
+    // Validate email format
+    if (!isValidEmail(sanitizedEmail)) {
+      console.log(`❌ REJECT: Invalid email format`);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid email address format',
+        verified: false 
+      });
+    }
+
+    // Validate screenshot
     if (!screenshotBase64) {
       console.log(`❌ REJECT: Screenshot missing`);
       return res.status(400).json({ 
@@ -127,18 +231,17 @@ app.post('/api/verify-transaction', (req: Request, res: Response) => {
       });
     }
 
-    // Validate transaction ID format (must start with T and have 21-22 digits)
-    const transactionIdRegex = /^T\d{21,22}$/;
-    if (!transactionIdRegex.test(transactionId.trim())) {
-      console.log(`❌ REJECT: Invalid format`);
+    // Validate transaction ID using helper function
+    if (!isValidTransactionId(sanitizedTxId)) {
+      console.log(`❌ REJECT: Invalid transaction ID format`);
       return res.status(400).json({ 
         success: false, 
-        error: 'Invalid transaction ID format',
+        error: 'Invalid transaction ID format. Must be in format: T followed by 21-22 digits',
         verified: false 
       });
     }
 
-    // SECURITY: Verify amount is reasonable (plan prices only)
+    // SECURITY: Verify amount is from valid plan prices only
     const validAmounts = [199, 299, 499, 599, 799, 999, 1499, 1999, 2999];
     const parsedAmount = parseInt(amount);
     if (!validAmounts.includes(parsedAmount)) {
@@ -150,9 +253,9 @@ app.post('/api/verify-transaction', (req: Request, res: Response) => {
       });
     }
 
-    // Check if this transaction was already used
-    if (verifiedTransactions[transactionId]) {
-      const existing = verifiedTransactions[transactionId];
+    // SECURITY: Check if transaction already used (prevent double-spending)
+    if (verifiedTransactions[sanitizedTxId]) {
+      const existing = verifiedTransactions[sanitizedTxId];
       if (existing.verified && existing.timestamp > Date.now() - 3600000) { // Within 1 hour
         console.log(`❌ REJECT: Transaction already used`);
         return res.status(400).json({ 
@@ -164,20 +267,21 @@ app.post('/api/verify-transaction', (req: Request, res: Response) => {
     }
 
     // Generate verification token
-    const verificationToken = generateVerificationToken(transactionId);
+    const verificationToken = generateVerificationToken(sanitizedTxId);
     
-    verifiedTransactions[transactionId] = {
-      transactionId,
+    // Store transaction with sanitized data
+    verifiedTransactions[sanitizedTxId] = {
+      transactionId: sanitizedTxId,
       amount: parsedAmount,
-      email,
+      email: sanitizedEmail,
       timestamp: Date.now(),
       verified: false,
       verificationToken,
-      screenshotBase64, // Store screenshot for HR review
+      screenshotBase64, // Store screenshot for manual review
     };
 
     console.log(`✅ ACCEPT: Transaction submitted for manual verification`);
-    console.log(`⚠️  HR ALERT: Verify this transaction ID in Paytm: ${transactionId}`);
+    console.log(`⚠️  HR ALERT: Verify this transaction ID in Paytm: ${sanitizedTxId}`);
 
     // Build screenshot CID attachment
     const screenshotAttachments: { filename: string; content: string; encoding: string; cid: string }[] = [];
@@ -418,8 +522,10 @@ app.post('/api/verify-transaction', (req: Request, res: Response) => {
   }
 });
 
-// Send email endpoint - returns immediately (email sent in background)
-app.post('/api/send-email', (req: Request, res: Response) => {
+// ========================================
+// 📧 EMAIL SENDING ENDPOINT (RATE LIMITED)
+// ========================================
+app.post('/api/send-email', emailLimiter, (req: Request, res: Response) => {
   try {
     const { to, subject, text, html, name, email, instagram, channelLink, niche, message, screenshotBase64 } = req.body;
 
