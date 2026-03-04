@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { Heart, Target, Youtube } from "lucide-react";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SectionHeading from "@/components/SectionHeading";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
@@ -27,7 +26,6 @@ const values = [
 const About = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <FloatingWhatsApp />
 
       <section className="pt-28 pb-24">

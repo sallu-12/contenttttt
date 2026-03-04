@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Play, FileText, BarChart3, Users, CheckCircle2, Youtube, Instagram, Eye, Clock, Lightbulb, TrendingUp, FolderOpen, ArrowRight, XCircle, CheckCircle } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import SectionHeading from "@/components/SectionHeading";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import StickyGetStarted from "@/components/StickyGetStarted";
@@ -48,7 +47,6 @@ const notForYou = [
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <FloatingWhatsApp />
       <StickyGetStarted />
 
