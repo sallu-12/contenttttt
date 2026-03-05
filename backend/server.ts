@@ -70,13 +70,59 @@ app.use(compression({ level: 6, threshold: 1024 }));
 // 5. JSON parsing with size limits (increased for base64 screenshots)
 app.use(express.json({ limit: '10mb' }));
 
-// 6. CORS with whitelist protection
-const allowedOrigins = isDev 
-  ? process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || []
-  : process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
+// 6. CORS with whitelist + preview domain support
+const parseCsvEnv = (value?: string) => {
+  return (value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const allowedOrigins = parseCsvEnv(process.env.ALLOWED_ORIGINS);
+const allowedOriginRegexes = parseCsvEnv(process.env.ALLOWED_ORIGIN_REGEX)
+  .map((pattern) => {
+    try {
+      return new RegExp(pattern);
+    } catch {
+      if (isDev) {
+        console.warn(`⚠️ Invalid ALLOWED_ORIGIN_REGEX pattern ignored: ${pattern}`);
+      }
+      return null;
+    }
+  })
+  .filter((regex): regex is RegExp => regex !== null);
+
+const isOriginAllowed = (origin: string) => {
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  if (isDev && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+    return true;
+  }
+
+  return allowedOriginRegexes.some((regex) => regex.test(origin));
+};
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow non-browser and same-origin requests that may not send Origin header.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    if (isDev) {
+      console.warn(`❌ CORS blocked origin: ${origin}`);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   maxAge: 86400, // Cache preflight for 24 hours
 }));
@@ -651,6 +697,15 @@ app.get('/api/debug', (req: Request, res: Response) => {
     isDev: isDev,
   };
   res.json(status);
+});
+
+// Health endpoint for Render health checks and uptime monitors
+app.get('/api/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    ok: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Cleanup old transactions (older than 24 hours)

@@ -6,6 +6,7 @@ services:
     plan: starter
     buildCommand: npm install
     startCommand: node -r tsx/esm backend/server.ts
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,6 +18,8 @@ services:
         fromEnv: EMAIL_PASS
       - key: ALLOWED_ORIGINS
         value: https://bolzaa-frontend.onrender.com,https://www.bolzaa.studio
+      - key: ALLOWED_ORIGIN_REGEX
+        value: ^https://.*\.vercel\.app$,^https://.*\.onrender\.com$
     autoDeploy: true
 
   - type: static_site
