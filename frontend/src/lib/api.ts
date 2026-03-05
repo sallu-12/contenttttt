@@ -20,14 +20,20 @@ type ApiErrorResponse = {
   error?: string;
 };
 
-const DEFAULT_TIMEOUT_MS = 30000;
-const RETRY_TIMEOUT_MS = 60000;
+const MAX_ATTEMPTS_PER_ENDPOINT = 2;
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const unique = (values: string[]) => Array.from(new Set(values));
 
+const isDevelopment = import.meta.env.DEV;
+
 const getApiBaseCandidates = () => {
+  // In dev mode, use relative paths so Vite proxy works
+  if (isDevelopment) {
+    return [""];
+  }
+
   const envPrimary = import.meta.env.VITE_API_BASE_URL?.trim();
   const envFallback = import.meta.env.VITE_API_FALLBACK_URL?.trim();
   const sameOrigin = typeof window !== "undefined" ? window.location.origin : "";
@@ -42,11 +48,10 @@ const getApiBaseCandidates = () => {
 
 const buildApiUrl = (base: string, path: string) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (!base) {
+    return normalizedPath;
+  }
   return `${base}${normalizedPath}`;
-};
-
-const isTimeoutError = (err: unknown) => {
-  return err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError");
 };
 
 const parseHttpError = (error: unknown) => {
@@ -65,14 +70,13 @@ const parseHttpError = (error: unknown) => {
   };
 };
 
-const sendEmailRequest = async (url: string, payload: SendEmailPayload, timeoutMs: number) => {
+const sendEmailRequest = async (url: string, payload: SendEmailPayload) => {
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(timeoutMs),
   });
 
   const data = (await response.json().catch(() => ({}))) as ApiSuccessResponse & ApiErrorResponse;
@@ -87,15 +91,14 @@ const sendEmailRequest = async (url: string, payload: SendEmailPayload, timeoutM
   };
 };
 
-export const sendEmail = async (payload: SendEmailPayload, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiSuccessResponse> => {
+export const sendEmail = async (payload: SendEmailPayload): Promise<ApiSuccessResponse> => {
   const endpoints = getApiBaseCandidates().map((base) => buildApiUrl(base, "/api/send-email"));
-  const attemptTimeouts = [timeoutMs, Math.max(RETRY_TIMEOUT_MS, timeoutMs)];
   let lastError: unknown = null;
 
   for (const endpoint of endpoints) {
-    for (const attemptTimeout of attemptTimeouts) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS_PER_ENDPOINT; attempt += 1) {
       try {
-        return await sendEmailRequest(endpoint, payload, attemptTimeout);
+        return await sendEmailRequest(endpoint, payload);
       } catch (error) {
         lastError = error;
 
@@ -108,18 +111,16 @@ export const sendEmail = async (payload: SendEmailPayload, timeoutMs = DEFAULT_T
           throw new Error(httpError.message);
         }
 
-        if (isTimeoutError(error)) {
-          continue;
+        // Network/CORS/other fetch issues: retry once on same endpoint, then move to next.
+        if (attempt + 1 >= MAX_ATTEMPTS_PER_ENDPOINT) {
+          break;
         }
-
-        // Network/CORS/other fetch issues should try next endpoint.
-        break;
       }
     }
   }
 
-  if (isTimeoutError(lastError)) {
-    throw new Error("Server slow response. Please try again in 20-30 seconds.");
+  if (lastError instanceof Error && lastError.message) {
+    throw lastError;
   }
 
   throw new Error("Server connection issue. Please refresh and try again.");

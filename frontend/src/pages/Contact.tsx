@@ -76,8 +76,11 @@ const Contact = () => {
       (e.target as HTMLFormElement).reset();
       setSelectedNiche("");
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to send message. Please try again.";
-      setError(errorMessage);
+      const raw = err instanceof Error ? err.message : "";
+      const normalized = /signal timed out|failed to fetch|networkerror|ssl/i.test(raw)
+        ? "Server connection issue. Please try again after 20-30 seconds."
+        : (raw || "Failed to send message. Please try again.");
+      setError(normalized);
       console.error("Email sending error:", err);
     } finally {
       setLoading(false);
