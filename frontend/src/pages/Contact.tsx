@@ -68,7 +68,7 @@ const Contact = () => {
         return;
       }
 
-      await sendEmail(data, 5000);
+      await sendEmail(data);
 
       // Show success immediately - email will be sent in background
       setSent(true);

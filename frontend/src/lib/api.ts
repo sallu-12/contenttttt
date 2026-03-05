@@ -20,6 +20,9 @@ type ApiErrorResponse = {
   error?: string;
 };
 
+const DEFAULT_TIMEOUT_MS = 15000;
+const RETRY_TIMEOUT_MS = 25000;
+
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const getApiBaseUrl = () => {
@@ -36,7 +39,11 @@ const buildApiUrl = (path: string) => {
   return `${base}${normalizedPath}`;
 };
 
-export const sendEmail = async (payload: SendEmailPayload, timeoutMs = 8000): Promise<ApiSuccessResponse> => {
+const isTimeoutError = (err: unknown) => {
+  return err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError");
+};
+
+const sendEmailRequest = async (payload: SendEmailPayload, timeoutMs: number) => {
   const response = await fetch(buildApiUrl("/api/send-email"), {
     method: "POST",
     headers: {
@@ -56,4 +63,23 @@ export const sendEmail = async (payload: SendEmailPayload, timeoutMs = 8000): Pr
     success: data.success ?? true,
     message: data.message,
   };
+};
+
+export const sendEmail = async (payload: SendEmailPayload, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ApiSuccessResponse> => {
+  try {
+    return await sendEmailRequest(payload, timeoutMs);
+  } catch (err) {
+    // Render cold starts can exceed short client timeouts, so retry once with a longer timeout.
+    if (isTimeoutError(err)) {
+      try {
+        return await sendEmailRequest(payload, Math.max(RETRY_TIMEOUT_MS, timeoutMs));
+      } catch (retryErr) {
+        if (isTimeoutError(retryErr)) {
+          throw new Error("Server slow response. Please try again in 10-20 seconds.");
+        }
+        throw retryErr;
+      }
+    }
+    throw err;
+  }
 };
