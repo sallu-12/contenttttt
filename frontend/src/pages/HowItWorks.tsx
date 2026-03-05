@@ -5,6 +5,7 @@ import { CreditCard, ClipboardList, Search, FolderOpen, ArrowRight } from "lucid
 import Footer from "@/components/Footer";
 import SectionHeading from "@/components/SectionHeading";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const steps = [
   {
@@ -30,6 +31,8 @@ const steps = [
 ];
 
 const HowItWorks = () => {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="min-h-screen bg-background">
       <FloatingWhatsApp />
@@ -46,10 +49,10 @@ const HowItWorks = () => {
             {steps.map((step, i) => (
               <motion.div
                 key={step.title}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={isMobile ? false : { opacity: 0, x: -20 }}
+                whileInView={isMobile ? {} : { opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.12, duration: 0.5 }}
+                transition={isMobile ? undefined : { delay: i * 0.12, duration: 0.5 }}
                 className="flex gap-6 rounded-xl border border-border bg-card p-6 card-hover"
               >
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

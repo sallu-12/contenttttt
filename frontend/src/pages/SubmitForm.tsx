@@ -11,6 +11,7 @@ import Footer from "@/components/Footer";
 import SectionHeading from "@/components/SectionHeading";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import { sendEmail } from "@/lib/api";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 type CheckoutState = {
   plan?: string;
@@ -28,6 +29,7 @@ const SubmitForm = () => {
   const location = useLocation();
   const state = (location.state as CheckoutState | null) ?? undefined;
   const [submitted, setSubmitted] = useState(false);
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -272,8 +274,8 @@ const SubmitForm = () => {
         <FloatingWhatsApp />
         <section className="flex min-h-[80vh] items-center justify-center pt-16">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={isMobile ? false : { opacity: 0, scale: 0.95 }}
+            animate={isMobile ? {} : { opacity: 1, scale: 1 }}
             className="mx-auto max-w-md text-center"
           >
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -306,9 +308,9 @@ const SubmitForm = () => {
           />
 
           <motion.form
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            initial={isMobile ? false : { opacity: 0, y: 20 }}
+            animate={isMobile ? {} : { opacity: 1, y: 0 }}
+            transition={isMobile ? undefined : { duration: 0.5 }}
             onSubmit={handleSubmit}
             className="mx-auto max-w-xl space-y-5 rounded-xl border border-border bg-card p-8 shadow-card"
           >

@@ -11,12 +11,14 @@ import SectionHeading from "@/components/SectionHeading";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import AnimatedBorderCard from "@/components/AnimatedBorderCard";
 import { sendEmail } from "@/lib/api";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const Contact = () => {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedNiche, setSelectedNiche] = useState("");
+  const isMobile = useIsMobile();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -109,15 +111,15 @@ const Contact = () => {
             </div>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={isMobile ? false : { opacity: 0, y: 20 }}
+              animate={isMobile ? {} : { opacity: 1, y: 0 }}
               className="md:col-span-3"
             >
-              <AnimatedBorderCard speed={10} glowBlur={14}>
+              <AnimatedBorderCard speed={10}>
               {sent ? (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={isMobile ? false : { opacity: 0, scale: 0.9 }}
+                  animate={isMobile ? {} : { opacity: 1, scale: 1 }}
                   className="flex flex-col items-center justify-center p-10 text-center"
                 >
                   <CheckCircle2 className="h-12 w-12 text-primary mb-4" />

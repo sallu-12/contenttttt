@@ -98,6 +98,15 @@ const transporter = nodemailer.createTransport({
   },
 } as SMTPTransport.Options);
 
+// Verify transporter connection on startup
+transporter.verify((error: any, success: boolean) => {
+  if (error) {
+    console.error('❌ Email transporter connection FAILED:', error.message);
+  } else if (success) {
+    console.log('✅ Email transporter connection VERIFIED');
+  }
+});
+
 // In-memory transaction store (would be database in production)
 const verifiedTransactions: {
   [key: string]: {
@@ -173,11 +182,15 @@ const generateContactEmailHTML = (name: string, email: string, instagram: string
 
 // Helper function to send email asynchronously (fire and forget with minimal logging in production)
 const sendEmailAsync = (mailOptions: SendMailOptions) => {
-  transporter.sendMail(mailOptions).catch((err) => {
-    if (isDev) {
+  transporter.sendMail(mailOptions)
+    .then((info) => {
+      if (isDev) {
+        console.log(`✅ Email SENT to: ${mailOptions.to} | MessageID: ${info.messageId}`);
+      }
+    })
+    .catch((err) => {
       console.error(`❌ Email FAILED to: ${mailOptions.to} | Error: ${err.message}`);
-    }
-  });
+    });
 };
 
 // ========================================
@@ -595,6 +608,49 @@ app.post('/api/send-email', emailLimiter, (req: Request, res: Response) => {
     }
     return res.status(500).json({ error: 'Request processing failed' });
   }
+});
+
+// ========================================
+// 🧪 TEST EMAIL ENDPOINT (FOR DEBUGGING)
+// ========================================
+app.post('/api/test-email', (req: Request, res: Response) => {
+  const testEmail = {
+    from: process.env.ADMIN_EMAIL,
+    to: process.env.ADMIN_EMAIL,
+    subject: '🧪 Test Email from Bolzaa Server',
+    text: `This is a test email to verify the email system is working properly at ${new Date().toLocaleString()}`,
+    html: `<h2>Test Email</h2><p>This is a test email to verify the email system is working properly.</p><p>Sent at: ${new Date().toLocaleString()}</p>`,
+  };
+
+  transporter.sendMail(testEmail)
+    .then((info) => {
+      console.log(`✅ Test email sent successfully | MessageID: ${info.messageId}`);
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Test email sent successfully!',
+        messageId: info.messageId 
+      });
+    })
+    .catch((err) => {
+      console.error(`❌ Test email failed: ${err.message}`);
+      return res.status(500).json({ 
+        success: false, 
+        error: err.message,
+        details: 'Check backend server logs for more info'
+      });
+    });
+});
+
+// Debug endpoint to check transporter and env status
+app.get('/api/debug', (req: Request, res: Response) => {
+  const status = {
+    adminEmail: process.env.ADMIN_EMAIL || 'NOT SET',
+    emailPassSet: !!process.env.EMAIL_PASS,
+    port: process.env.PORT || 'NOT SET',
+    nodeEnv: process.env.NODE_ENV || 'NOT SET',
+    isDev: isDev,
+  };
+  res.json(status);
 });
 
 // Cleanup old transactions (older than 24 hours)

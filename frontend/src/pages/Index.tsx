@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Play, FileText, BarChart3, Users, CheckCircle2, Youtube, Instagram, Eye, Clock, Lightbulb, TrendingUp, FolderOpen, ArrowRight, XCircle, CheckCircle } from "lucide-react";
+import { Play, FileText, BarChart3, Users, CheckCircle2, Youtube, Instagram, Eye, Clock, Lightbulb, TrendingUp, FolderOpen, ArrowRight } from "lucide-react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import heroBg from "@/assets/hero-bg.jpg";
 import SectionHeading from "@/components/SectionHeading";
 import Footer from "@/components/Footer";
@@ -45,6 +46,8 @@ const notForYou = [
 ];
 
 const Index = () => {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="min-h-screen bg-background">
       <FloatingWhatsApp />
@@ -53,7 +56,7 @@ const Index = () => {
       {/* Hero */}
       <section className="relative flex min-h-[92vh] items-center overflow-hidden pt-16">
         <div className="absolute inset-0">
-          <img src={heroBg} alt="" className="h-full w-full object-cover opacity-20" />
+          <img src={heroBg} alt="" className="h-full w-full object-cover opacity-20" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/80 to-background" />
         </div>
         <div className="pointer-events-none absolute left-8 top-1/2 z-10 hidden -translate-y-1/2 lg:block xl:left-16">
@@ -70,7 +73,7 @@ const Index = () => {
           <motion.div
             initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: isMobile ? 0 : 0.7 }}
             className="mx-auto max-w-3xl text-center"
           >
             <div className="mb-6 flex items-center justify-center gap-3">
@@ -97,22 +100,29 @@ const Index = () => {
                 </Button>
               </Link>
               <Link to="/samples">
-                <motion.div
-                  animate={{
-                    boxShadow: [
-                      "0 0 0px 0px rgba(168,85,247,0)",
-                      "0 0 16px 4px rgba(168,85,247,0.45)",
-                      "0 0 0px 0px rgba(168,85,247,0)",
-                    ],
-                  }}
-                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                  className="rounded-lg"
-                >
+                {isMobile ? (
                   <Button size="lg" variant="outline" className="border-primary/60 text-foreground hover:bg-secondary px-8 text-base hover:border-primary hover:shadow-md transition-all duration-300">
                     <Play className="mr-1 h-4 w-4" />
                     Get Free Sample
                   </Button>
-                </motion.div>
+                ) : (
+                  <motion.div
+                    animate={{
+                      boxShadow: [
+                        "0 0 0px 0px rgba(168,85,247,0)",
+                        "0 0 16px 4px rgba(168,85,247,0.45)",
+                        "0 0 0px 0px rgba(168,85,247,0)",
+                      ],
+                    }}
+                    transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                    className="rounded-lg"
+                  >
+                    <Button size="lg" variant="outline" className="border-primary/60 text-foreground hover:bg-secondary px-8 text-base hover:border-primary hover:shadow-md transition-all duration-300">
+                      <Play className="mr-1 h-4 w-4" />
+                      Get Free Sample
+                    </Button>
+                  </motion.div>
+                )}
               </Link>
             </div>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
@@ -139,10 +149,10 @@ const Index = () => {
             {painPoints.map((point, i) => (
               <motion.div
                 key={point.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={isMobile ? false : { opacity: 0, y: 24 }}
+                whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
+                transition={isMobile ? undefined : { delay: i * 0.1, duration: 0.5 }}
                 className="rounded-xl border border-border bg-card p-6 card-hover group hover:border-primary/50 hover:bg-gradient-warm transition-all duration-300"
               >
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 text-primary group-hover:from-primary/40 group-hover:to-accent/40 transition-all duration-300 animate-pulse-glow">
@@ -165,8 +175,8 @@ const Index = () => {
             subtitle="You focus on filming. We'll give you the scripts, ideas, hooks, and strategy — all researched for your niche."
           />
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={isMobile ? false : { opacity: 0, y: 20 }}
+            whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="mx-auto max-w-2xl rounded-2xl border border-border bg-gradient-warm p-8 md:p-10 text-center"
           >
@@ -192,10 +202,10 @@ const Index = () => {
             {steps.map((step, i) => (
               <motion.div
                 key={step.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={isMobile ? false : { opacity: 0, y: 24 }}
+                whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.12, duration: 0.5 }}
+                transition={isMobile ? undefined : { delay: i * 0.12, duration: 0.5 }}
                 className="group relative rounded-xl border border-border bg-card p-6 card-hover overflow-hidden hover:border-primary/50 hover:shadow-hover transition-all duration-300"
               >
                 {/* Animated background gradient */}
@@ -240,10 +250,10 @@ const Index = () => {
             ].map((item, i) => (
               <motion.div
                 key={item.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={isMobile ? false : { opacity: 0, y: 20 }}
+                whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                transition={isMobile ? undefined : { delay: i * 0.1 }}
                 className="group rounded-xl border border-border bg-card p-6 text-center card-hover hover:border-primary/50 hover:shadow-hover hover:bg-gradient-warm transition-all duration-300"
               >
                 <div className="w-1 h-1 bg-primary rounded-full mx-auto mb-3 group-hover:animate-pulse-glow"></div>
@@ -260,8 +270,8 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 animate-gradient-shift"></div>
         <div className="container relative">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={isMobile ? false : { opacity: 0, y: 20 }}
+            whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="rounded-2xl bg-gradient-hero p-12 md:p-16 text-center shadow-glow hover:shadow-hover transition-shadow duration-300 border border-primary/20 group"
           >

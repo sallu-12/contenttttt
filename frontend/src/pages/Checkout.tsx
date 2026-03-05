@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Lock, Phone, CreditCard, CheckCircle2, WifiOff, RefreshCw, AlertTriangle } from "lucide-react";
 import Footer from "@/components/Footer";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
+import Navbar from "@/components/Navbar";
 
 interface PlanDetails {
   name: string;

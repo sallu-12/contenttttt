@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import SectionHeading from "@/components/SectionHeading";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import AnimatedBorderCard from "@/components/AnimatedBorderCard";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const values = [
   {
@@ -24,6 +25,8 @@ const values = [
 ];
 
 const About = () => {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="min-h-screen bg-background">
       <FloatingWhatsApp />
@@ -37,12 +40,12 @@ const About = () => {
           />
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={isMobile ? false : { opacity: 0, y: 20 }}
+            whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="mx-auto max-w-2xl"
           >
-            <AnimatedBorderCard speed={12} glowBlur={16}>
+            <AnimatedBorderCard speed={12}>
               <div className="p-8 md:p-10 text-center">
                 {/* Ambient glow blobs */}
                 <div className="pointer-events-none absolute -top-8 -left-8 h-40 w-40 rounded-full bg-purple-700/15 blur-3xl" />
@@ -61,10 +64,10 @@ const About = () => {
             {values.map((v, i) => (
               <motion.div
                 key={v.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={isMobile ? false : { opacity: 0, y: 24 }}
+                whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                transition={isMobile ? undefined : { delay: i * 0.1 }}
                 className="rounded-xl border border-border bg-card p-6 text-center card-hover"
               >
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">

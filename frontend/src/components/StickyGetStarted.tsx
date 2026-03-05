@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const StickyGetStarted = () => {
   const [visible, setVisible] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const handleScroll = () => setVisible(window.scrollY > 600);
@@ -16,9 +18,10 @@ const StickyGetStarted = () => {
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ y: 100, opacity: 0 }}
+          initial={isMobile ? false : { y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
+          exit={isMobile ? false : { y: 100, opacity: 0 }}
+          transition={isMobile ? { duration: 0.15 } : undefined}
           className="fixed bottom-6 left-6 z-40 md:hidden"
         >
           <Link to="/pricing">

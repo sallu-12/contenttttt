@@ -6,9 +6,12 @@ import Footer from "@/components/Footer";
 import SectionHeading from "@/components/SectionHeading";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import AnimatedBorderCard from "@/components/AnimatedBorderCard";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 
 const Samples = () => {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="min-h-screen bg-background">
       <FloatingWhatsApp />
@@ -23,25 +26,31 @@ const Samples = () => {
 
           <div className="mt-16 text-center">
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={isMobile ? false : { opacity: 0, y: 24 }}
+              whileInView={isMobile ? {} : { opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              transition={isMobile ? undefined : { duration: 0.5 }}
               className="mx-auto max-w-lg"
             >
-              <AnimatedBorderCard speed={8} glowBlur={14}>
+              <AnimatedBorderCard speed={8}>
                 <div className="p-8">
                 {/* Ambient glows inside */}
                 <div className="pointer-events-none absolute -top-8 -left-8 h-44 w-44 rounded-full bg-purple-700/15 blur-3xl" />
                 <div className="pointer-events-none absolute -bottom-8 -right-8 h-44 w-44 rounded-full bg-pink-700/15 blur-3xl" />
                 {/* Icon */}
-                <motion.div
-                  animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-primary/30"
-                >
-                  <Sparkles className="h-7 w-7 text-white" />
-                </motion.div>
+                {isMobile ? (
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-primary/30">
+                    <Sparkles className="h-7 w-7 text-white" />
+                  </div>
+                ) : (
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple-500 shadow-lg shadow-primary/30"
+                  >
+                    <Sparkles className="h-7 w-7 text-white" />
+                  </motion.div>
+                )}
 
                 <h3 className="text-2xl font-black bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
                   Request Your Free Sample Script
@@ -66,16 +75,23 @@ const Samples = () => {
                 </div>
 
                 <Link to="/contact">
-                  <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="mt-6"
-                  >
-                    <Button className="w-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-shadow py-5">
+                  {isMobile ? (
+                    <Button className="w-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-shadow py-5 mt-6">
                       Get My Free Sample Script
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
-                  </motion.div>
+                  ) : (
+                    <motion.div
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="mt-6"
+                    >
+                      <Button className="w-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-shadow py-5">
+                        Get My Free Sample Script
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  )}
                 </Link>
 
                 <p className="mt-3 text-xs text-white/25">Delivered within 24–48 hours · 100% free · No commitment</p>
